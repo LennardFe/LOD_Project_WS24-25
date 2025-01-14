@@ -1,0 +1,9 @@
+.venv
+*.xml
+*.iml
+.env
+.idea
+.html
+__pycache__
+qmd/project_abstract_files/*
+*.json

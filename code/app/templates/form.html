@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Game Search</title>
+    <link rel="stylesheet" href="static/style.css"></link>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon-32x32-LOD.png') }}">
+</head>
+<body>
+<h1>Game Search</h1>
+<form method="POST">
+    <label for="search_term">Enter your search term:</label>
+    <input type="text" id="search_term" name="search_term" oninput="fetchSuggestions()" onfocus="fetchSuggestions()"
+           required>
+    <ul id="suggestions"></ul>
+    <br><br>
+
+    <label for="format_dropdown">Choose the format:</label>
+    <select id="format_dropdown" name="format_dropdown" required>
+        {% for format_option in format_options %}
+        <option value="{{ format_option }}">{{ format_option }}</option>
+        {% endfor %}
+    </select>
+    <br><br>
+    <input type="hidden" id="game_id" name="game_id">
+    <button type="submit">Send</button>
+</form>
+
+<script>
+    function fetchSuggestions() {
+        const searchTerm = document.getElementById("search_term").value;
+
+        fetch(`/autocomplete?q=${searchTerm}`)
+            .then(response => response.json())
+            .then(data => {
+                const suggestionsList = document.getElementById("suggestions");
+                suggestionsList.innerHTML = "";
+                
+                if (data.length > 0) {
+                    suggestionsList.style.display = "block";
+                    data.forEach(item => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px;">
+                            <span style="flex: 1;">${item.name}</span> <!-- Game Name -->
+                            <span style="color: #007bff; font-weight: bold;">${item.score}</span> <!-- Score -->
+                        </div>
+                        `;
+                        
+                        li.style.cursor = "pointer";
+                        li.onclick = () => selectSuggestion(item.name, item.id);
+                        suggestionsList.appendChild(li);
+                    });
+                } else {
+                    suggestionsList.style.display = "none";
+                }
+            })
+            .catch(error => console.error("Error fetching suggestions:", error));
+    }
+
+    function selectSuggestion(name, id) {
+        document.getElementById("search_term").value = name;
+        document.getElementById("game_id").value = id;
+        clearSuggestions();
+    }
+
+    function clearSuggestions() {
+        const suggestionsList = document.getElementById("suggestions");
+        suggestionsList.innerHTML = "";
+        suggestionsList.style.display = "none";
+    }
+
+    function clearTextInput() {
+        const searchTermInput = document.getElementById("search_term");
+        searchTermInput.value = "";
+        clearSuggestions();
+    }
+</script>
+</body>
+<footer>
+    Data by <a href="https://mobygames.com" referrerpolicy="no-referrer" target="_blank">MobyGames</a>
+</footer>
+</html>

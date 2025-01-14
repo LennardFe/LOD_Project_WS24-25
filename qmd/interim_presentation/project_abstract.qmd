@@ -1,0 +1,195 @@
+---
+title: "Project Abstract for Linked Open Data"
+author:
+  - name: Ole J. Berg
+    affiliation: 
+    - id: thk
+      name: Technische Hochschule Köln
+      isni: 0000000110096139
+    orcid: 0009-0007-3148-3657
+    email: ole_julius.berg@smail.th-koeln.de
+    equal-contributor: true
+  - name: Lennard Feuerbach
+    affiliation: 
+    - ref: thk
+    email: lennard.feuerbach@smail.th-koeln.de
+    equal-contributor: true
+date: today
+date-format: "DD/MM/YYYY"
+license: "CC BY"
+csl: ieee.csl
+highlight-style: tango
+format: 
+  revealjs:
+    theme: simple
+    logo: TH_Koeln_Logo.png
+    footer: "Ole Berg & Lennard Feuerbach"
+    slide-number: true
+    transition: slide
+    transition-speed: fast
+    width: 1400
+    code-block-height: 500px
+    preview-links: false
+---
+
+# Goal
+
+-   Focus on data on video games
+-   Visualise video games and related data
+    - Companies
+    - Genres
+    - Platforms
+- Enable querying of this data
+
+# Steps
+
+## Step 1: Acquiring the Data ([DONE]{style="color:green;"})
+
+-   [MobyGames](https://mobygames.com) is our data source
+-   They provide exports and an API
+-   Download of the top 2,500 games by *MobyGames* rating
+-   Get data on games, genres and genre types from `API`
+-   Extract data on companies from `HTML`
+
+## Step 2: Saving the Data for Further Use ([DONE]{style="color:green;"})
+
+-   Principle: Save all data in an SQL DB (Neon) first
+-   API limitation: Save API responses as `jsonb` and do processing later
+-   Largely normalised tables
+
+```{python}
+#| label: fig-datastats
+#| fig-cap: "The number of entities and relations extracted from MobyGames"
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+table_row_counts = pd.read_csv('table_row_counts.csv')
+plt.figure(figsize=(10, 3))
+
+colors = ['C4'] + ['C1'] * 5 + ['C0'] * 3
+bars = plt.barh(table_row_counts['Table Name'], table_row_counts['Row Count'], color=colors)
+
+plt.xlabel("Row Count")
+plt.ylabel("Table Name")
+plt.title("Row Counts per Table")
+plt.tight_layout()
+
+for bar, count in zip(bars, table_row_counts['Row Count']):
+    if count < 5000:
+        plt.text(bar.get_width() + 5, bar.get_y() + bar.get_height() / 2, str(count), va="center", fontsize=8,
+                 color="black")
+
+third_bar = bars[-4]
+y_position = third_bar.get_y() + third_bar.get_height() + (
+            bars[-3].get_y() - third_bar.get_y() - third_bar.get_height()) / 2
+plt.axhline(y=y_position, color="grey", linestyle="-", linewidth=1)
+
+eighth_bar = bars[-9]
+y_position = eighth_bar.get_y() + eighth_bar.get_height() + (
+            bars[-8].get_y() - eighth_bar.get_y() - eighth_bar.get_height()) / 2
+plt.axhline(y=y_position, color="grey", linestyle="-", linewidth=1)
+
+x_limit = plt.xlim()
+x_position = x_limit[0] + (x_limit[1] - x_limit[0]) * 64.25 / 100
+
+plt.text(x_position, bars[7].get_y() + bars[7].get_height() / 2, "Relations", fontsize=12, color="C0", ha="center",
+         va="center")
+plt.text(x_position, bars[3].get_y() + bars[3].get_height() / 2, "Entities", fontsize=12, color="C1", ha="center",
+         va="center")
+plt.text(x_position, bars[0].get_y() + bars[0].get_height() / 2, "Helper", fontsize=12, color="C4", ha="center",
+         va="center")
+
+plt.grid(which='major', axis='x')
+plt.show()
+
+```
+
+## Step 3: Moving from RDBMS to Graph DB ([DONE]{style="color:green;"})
+
+- Data is now moved from the relational database to a graph DB
+- The free tier of `Neo4j` is used for this purpose
+- The basic tables get transformed into nodes with their attributes
+- The foreign keys from the RDBMS get transformed to relationships
+
+## Step 4: Writing the Data into a `Neo4j` DB ([DONE]{style="color:green;"})
+
+```{.python code-line-numbers="|2-8|10-15|24-34|37-50|53-57"}
+# Tables from the Relational Database [Table, [Columns], Label]
+TABLES = [
+    ("company", ["company_id", "company_name"], "Company"),
+    ("game", ["game_id", "title", "score", "release_date"], "Game"),
+    ("genre", ["genre_id", "name"], "Genre"),
+    ("genre_type", ["genre_type_id", "name"], "GenreType"),
+    ("platform", ["platform_id", "name"], "Platform")
+]
+
+# Relationship tables from the Relational Database [Table, [Columns], Table1, Table2, Column, RelationshipType]
+RELATIONSHIP_TABLES = [
+    ("games_companies", ["game_id", "company_id", "type"], "Game", "Company", "identifier", None),
+    ("games_genres", ["game_id", "genre_id"], "Game", "Genre", "identifier", "HAS_GENRE"),
+    ("games_platforms", ["game_id", "platform_id"], "Game", "Platform", "identifier", "AVAILABLE_ON"),
+]
+
+[...]
+
+def transfer_data():
+    with neo4j_driver.session() as session:
+        data_list = [] # List to store the data to create nodes
+        
+        # Create nodes based on the tables
+        for row in TABLES:
+            table_name, columns, label = row
+
+            data = fetch_data_from_neon(table_name, columns)
+            for row in data:
+                data = dict(zip(columns, row))
+                schema_data = map_nodes_to_schema_org(label, data)
+                data_list.append(schema_data)
+
+            session.execute_write(create_batch_nodes, label, data_list)
+            data_list = []
+
+        # TODO: This part is exceptionally slow; still unclear why
+        for row in RELATIONSHIP_TABLES:
+            table_name, columns, table1, table2, column, type = row
+
+            data = fetch_data_from_neon(table_name, columns)
+            for row in data:
+                data = dict(zip(columns, row))
+                relationship_type = type if type else data[columns[2]]
+
+                session.execute_write(
+                    create_relationship,
+                    table1, (column, data[columns[0]]),
+                    table2, (column, data[columns[1]]),
+                    relationship_type
+                )
+ 
+        # TODO: Refactor this to be more dynamic, currently hardcoded since its the only relation that is one-to-many
+        genres = fetch_data_from_neon("genre", ["genre_id", "genre_type_id"])
+        for genre in genres:
+            session.execute_write(
+                create_relationship, "Genre", ("identifier", genre[0]), "identifier", ("genre_type_id", genre[1]), "IS_TYPE"
+            )
+```
+
+## Step 5: Including Schema.org ([Until End of Week]{style="color:orange"})
+
+- [Like shown in this example here](https://neo4j.com/labs/neosemantics/4.0/mapping/)
+- Company   → https://schema.org/Organization
+- Game      → https://schema.org/VideoGame
+- Platform  → https://schema.org/GamePlatform
+- Genre     → *TODO*: Find or create own Schema
+- GenreType → *TODO*: Find or create own Schema
+
+## Step 6: Possible Further Steps ([Until End of Year]{style="color:red"})
+
+- Connect our data with publicly available knowledge bases
+    - DBpedia, Wikidata, ...
+- Expand our data using publicly available unstructured data
+    - Co-Occurrence, Clustering, Pattern Matching, ...
+- Creating an API endpoint on our data for retrieving data
+    - Problem: N10s not in Aura DB available
+    - Either: Query DB and serialize to JSON-LD manually
+    - Or: Install Neo4j (+ n10s) on a server

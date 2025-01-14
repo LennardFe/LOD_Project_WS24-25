@@ -1,0 +1,208 @@
+---
+title: "GameGraph: Exploring Video Game Data with Neo4j and Flexible Data Serialization"
+author:
+  - name: Ole J. Berg
+    affiliation: 
+    - id: thk
+      name: Technische Hochschule Köln
+      isni: 0000000110096139
+    orcid: 0009-0007-3148-3657
+    email: ole_julius.berg@smail.th-koeln.de
+    equal-contributor: true
+  - name: Lennard Feuerbach
+    affiliation: 
+    - ref: thk
+    email: lennard.feuerbach@smail.th-koeln.de
+    equal-contributor: true
+date: 01/14/2025
+date-format: "DD/MM/YYYY"
+license: "CC BY"
+csl: final_presentation_files/assets/ieee.csl
+highlight-style: tango
+format: 
+  revealjs:
+    theme: simple
+    logo: final_presentation_files/assets/TH_Koeln_Logo.png
+    footer: "Ole Berg & Lennard Feuerbach"
+    slide-number: true
+    transition: slide
+    transition-speed: fast
+    width: 1400
+    code-block-height: 450px
+    preview-links: false
+    toc: true
+    toc-depth: 1
+    toc-title: "Agenda"
+---
+
+# **Introduction**
+
+- The project focuses on visualizing video game and related data
+- Provide an approach for querying the data efficiently and flexibly
+    - Create a simple visual interface for easily querying the data
+- The results of those queries should be conform to a defined ontology
+
+# **Technical Basics**
+
+- The data source for the whole project is [MobyGames](https://mobygames.com)
+- First the data is stored in a [Neon](https://neon.tech/) relational database
+- Afterwards moved the data to a [Neo4j](https://neo4j.com/) graph database 
+- Neo4j was setup on an Ubuntu server hosted by [DigitalOcean](https://www.digitalocean.com/)
+- Further tools: Neo4j Desktop, Python, JS, HTML, GitHub, Quarto ...
+
+# **Project Steps**
+
+## Step 1: Acquiring the Data
+
+-  *MobyGames* is data source 
+- Provide the possibility of retrieving data via `API`
+- Downloaded the top 2,500 games based on the *MobyGames* rating
+- Got further data on the games, genres and genre types by `API`
+- Company-related data was extracted from the `HTML`
+
+## Step 2: Saving in Relational DB
+
+- Principle: Save all the data in a relational database (*Neon*) first
+- API limitation: Save API responses as `jsonb` and do processing later
+- The data and tables were mostly normalized to reduce redundancy
+
+```{python}
+#| label: fig-datastats
+#| fig-cap: "The number of entities and relations extracted from MobyGames"
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+table_row_counts = pd.read_csv('final_presentation_files\\assets\\table_row_counts.csv')
+plt.figure(figsize=(10, 3))
+
+colors = ['C4'] + ['C1'] * 5 + ['C0'] * 3
+bars = plt.barh(table_row_counts['Table Name'], table_row_counts['Row Count'], color=colors)
+
+plt.xlabel("Row Count")
+plt.ylabel("Table Name")
+plt.title("Row Counts per Table")
+plt.tight_layout()
+
+for bar, count in zip(bars, table_row_counts['Row Count']):
+    if count < 5000:
+        plt.text(bar.get_width() + 5, bar.get_y() + bar.get_height() / 2, str(count), va="center", fontsize=8,
+                 color="black")
+
+third_bar = bars[-4]
+y_position = third_bar.get_y() + third_bar.get_height() + (
+            bars[-3].get_y() - third_bar.get_y() - third_bar.get_height()) / 2
+plt.axhline(y=y_position, color="grey", linestyle="-", linewidth=1)
+
+eighth_bar = bars[-9]
+y_position = eighth_bar.get_y() + eighth_bar.get_height() + (
+            bars[-8].get_y() - eighth_bar.get_y() - eighth_bar.get_height()) / 2
+plt.axhline(y=y_position, color="grey", linestyle="-", linewidth=1)
+
+x_limit = plt.xlim()
+x_position = x_limit[0] + (x_limit[1] - x_limit[0]) * 64.25 / 100
+
+plt.text(x_position, bars[7].get_y() + bars[7].get_height() / 2, "Relations", fontsize=12, color="C0", ha="center",
+         va="center")
+plt.text(x_position, bars[3].get_y() + bars[3].get_height() / 2, "Entities", fontsize=12, color="C1", ha="center",
+         va="center")
+plt.text(x_position, bars[0].get_y() + bars[0].get_height() / 2, "Helper", fontsize=12, color="C4", ha="center",
+         va="center")
+
+plt.grid(which='major', axis='x')
+plt.show()
+
+```
+
+## Step 3: From Relational to Graph
+
+- Data is now moved from the relational database to a graph database
+- For plugins reasons: Deployment of *Neo4j* server on Ubuntu server
+- Installation of `neosemantics` and `APOC`, for *Schema.org* and *Cypher* support
+- The basic tables get transformed into nodes with their attributes
+- The foreign keys in the relational database get transformed to relationships
+
+## Step 4: Saving in Graph DB
+
+- Extracted data from the relational database using `psycopg2` package
+- Saved the extracted data in the graph database using `neo4j` package
+
+```{.python code-line-numbers="|2-8|12-19|21-29|33-49"}
+# Tables from the Relational Database [Table, [Columns], Label]
+TABLES = [
+    ("company", ["company_id", "company_name"], "Company"),
+    ("game", ["game_id", "title", "score", "release_date"], "Game"),
+    ("genre", ["genre_id", "name"], "Genre"),
+    ("genre_type", ["genre_type_id", "name"], "GenreType"),
+    ("platform", ["platform_id", "name"], "Platform")
+]
+
+[...]
+
+def fetch_data_from_neon(table_name, columns):
+    neon_connection = psycopg2.connect(
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+    )
+    neon_cursor = neon_connection.cursor()
+    
+    column_list = ", ".join(columns)
+    query = f"SELECT {column_list} FROM {table_name}"
+    neon_cursor.execute(query)
+    data = neon_cursor.fetchall()
+
+    neon_cursor.close()
+    neon_connection.close()
+
+    return data
+
+[...]
+
+def transfer_data():
+    with neo4j_driver.session() as session:
+        data_list = []
+        
+        for row in TABLES:
+            table_name, columns, label = row
+
+            data = fetch_data_from_neon(table_name, columns)
+            for row in data:
+                data = dict(zip(columns, row))
+                schema_data = map_nodes(label, data)
+                data_list.append(schema_data)
+
+            session.execute_write(create_batch_nodes, label, data_list)
+            data_list = []
+
+        [...]
+```
+
+## Step 5: Mapping Schema.org
+
+- For exporting onthology conforming data, mapping can be used in Neo4j
+- Realized by the `neosemantics` plugin, *Schema.org* can be incorporated [2]
+- First create a namespace using: 
+    - `CALL n10s.nsprefixes.add("sch","http://schema.org/");`
+- Then create mappings between attribute and types, e. g.: 
+    - `CALL n10s.mapping.add("http://schema.org/VideoGame", "Game");`
+- For attributes which have no fitting type, own ones were created
+
+# **Live Demo**
+
+![‎](final_presentation_files/assets/live_demo.jpg)
+
+# **Reflection**
+
+- Starting with data in a relational database caused several follow-up issues
+- These issues complicated transfer to graph database and ontology mapping 
+    - e.g. normalizing data or creating tables for each category
+- Manual `JSON` manipulation was required to ensure *Schema.org* compliance
+- Significant time and effort were spent fixing these issues afterwards
+- Future projects should prioritize graph database design from the start
+
+# **References**
+
+- [1] GitHub, "Project in WS 24/25 for the module Linked Open Data and Knowledge Graphs in the Master Digital Sciences" Accessed: Jan. 13, 2025. [Online]. Available: https://github.com/ole-berg/DS_LOD_and_Knowledge_Graphs_2024_Berg_Feuerbach
+- [2] Neo4j, “Mapping graph models”. Accessed: Jan. 13, 2025. [Online]. Available: https://neo4j.com/labs/neosemantics/4.0/mapping/

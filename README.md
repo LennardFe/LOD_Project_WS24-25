@@ -1,2 +1,6 @@
-# LOD_Project_WS24-25
-The final project of the master module "Linked-Open Data and Knowledge Graphs (LOD)" @ TH-Köln.
+# <div align="justify">Project in WS 24/25 for the module Linked Open Data and Knowledge Graphs in the Master Digital Sciences</div>
+
+Supervisors: **Prof. Dr. Konrad Förstner and Vanessa Scharf**\
+Elaboration by: **Ole Berg and Lennard Feuerbach**
+
+<div align="justify">This project transforms video game data from the <a href="https://www.mobygames.com/info/api">MobyGames API</a> into a knowledge graph. First, we import the data into a relational database hosted on the free <a href="https://neon.tech/home">Neon</a> tier, where it is customized and processed. Next, the processed data is transferred to a <a href="https://neo4j.com">Neo4j</a> graph database, hosted on a <a href="https://www.digitalocean.com/">DigitalOcean</a> Ubuntu server, funded by the $200 <a href="https://education.github.com/pack">GitHub Student Developer Pack</a> credit. Using the Neosemantics plugin, we incorporate Schema.org as an ontology, mapping our graph database attributes to the appropriate Schema.org types and properties. This enables us to export ontology-compliant data in various serialization formats. Additionally, we built a simple web interface to test the project and retrieve data in different formats, showcasing the Schema.org integration in action.</div>

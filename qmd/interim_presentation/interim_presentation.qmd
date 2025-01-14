@@ -17,12 +17,12 @@ author:
 date: today
 date-format: "DD/MM/YYYY"
 license: "CC BY"
-csl: ieee.csl
+csl: interim_presentation_files/assets/ieee.csl
 highlight-style: tango
 format: 
   revealjs:
     theme: simple
-    logo: TH_Koeln_Logo.png
+    logo: interim_presentation_files/assets/TH_Koeln_Logo.png
     footer: "Ole Berg & Lennard Feuerbach"
     slide-number: true
     transition: slide
@@ -64,7 +64,7 @@ format:
 import matplotlib.pyplot as plt
 import pandas as pd
 
-table_row_counts = pd.read_csv('table_row_counts.csv')
+table_row_counts = pd.read_csv('interim_presentation_files\\assets\\table_row_counts.csv')
 plt.figure(figsize=(10, 3))
 
 colors = ['C4'] + ['C1'] * 5 + ['C0'] * 3

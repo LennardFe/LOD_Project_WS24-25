@@ -16,23 +16,29 @@ Elaboration by: **Ole Berg and Lennard Feuerbach**
 <br>
 
 <p align="center" width="100%">
-    <img width="33%" src="https://github.com/user-attachments/assets/ec67b3e8-68c4-4d43-bd2b-8fbb7068d47e"> 
+    <img width="100%" src="https://github.com/user-attachments/assets/ec67b3e8-68c4-4d43-bd2b-8fbb7068d47e"> 
 </p>
 
 <div align="justify">Subsequently, the data is transferred into a graph database structure, as illustrated in the image below.</div>
 
 <br>
 
-![baldur_graph](https://github.com/user-attachments/assets/34a19196-9eb4-481b-a487-4ef0b0a57c90)
+<p align="center" width="100%">
+    <img width="100%" src="https://github.com/user-attachments/assets/1d9937cd-eef0-42ba-a09a-1bcbd357370b"> 
+</p>
 
 <div align="justify">Based on this graph database, the web interface is utilized to retrieve and display the data in various serialization formats. The following image demonstrates the different available options.</div>
 
 <br>
 
-![web_interface](https://github.com/user-attachments/assets/a58b5752-e4f2-4465-9a6a-8005eca9b7f1)
+<p align="center" width="100%">
+    <img width="100%" src="https://github.com/user-attachments/assets/a58b5752-e4f2-4465-9a6a-8005eca9b7f1"> 
+</p>
 
 <div align="justify">Based on the user's input in the interface, the data will be displayed in the chosen format. The image afterwards shows the video game data for <i>Baldur's Gate III</i> in the selected Turtle format.</div>
 
 <br>
 
-![baldur_turtle](https://github.com/user-attachments/assets/f2182ba6-8e66-485a-9285-a4680275b131)
+<p align="center" width="100%">
+    <img width="100%" src="https://github.com/user-attachments/assets/f2182ba6-8e66-485a-9285-a4680275b131"> 
+</p>

@@ -13,16 +13,26 @@ Elaboration by: **Ole Berg and Lennard Feuerbach**
 
 <div align="justify">As mentioned earlier, the data is initially structured in a relational database format for future use. For the video games, the data is organized as follows.</div>
 
-![baldur_rela](https://github.com/user-attachments/assets/ec67b3e8-68c4-4d43-bd2b-8fbb7068d47e)
+<br>
+
+<p align="center" width="100%">
+    <img width="33%" src="https://github.com/user-attachments/assets/ec67b3e8-68c4-4d43-bd2b-8fbb7068d47e"> 
+</p>
 
 <div align="justify">Subsequently, the data is transferred into a graph database structure, as illustrated in the image below.</div>
 
-![baldur_graph](https://github.com/user-attachments/assets/8b25b083-8992-4c50-ab24-5dbccf5922a8)
+<br>
+
+![baldur_graph](https://github.com/user-attachments/assets/34a19196-9eb4-481b-a487-4ef0b0a57c90)
 
 <div align="justify">Based on this graph database, the web interface is utilized to retrieve and display the data in various serialization formats. The following image demonstrates the different available options.</div>
+
+<br>
 
 ![web_interface](https://github.com/user-attachments/assets/a58b5752-e4f2-4465-9a6a-8005eca9b7f1)
 
 <div align="justify">Based on the user's input in the interface, the data will be displayed in the chosen format. The image afterwards shows the video game data for <i>Baldur's Gate III</i> in the selected Turtle format.</div>
+
+<br>
 
 ![baldur_turtle](https://github.com/user-attachments/assets/f2182ba6-8e66-485a-9285-a4680275b131)
